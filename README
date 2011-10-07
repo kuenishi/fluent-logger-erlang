@@ -1,0 +1,4 @@
+fluent-logger-erlang
+====================
+
+erlang logger using gen_event to output to fluent.
