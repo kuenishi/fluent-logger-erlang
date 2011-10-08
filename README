@@ -5,12 +5,8 @@ erlang logger using gen_event to output to fluent.
 
 first example:
 
-#+BEGIN_EXAMPLE
-
-    {ok,_Pid}=gen_event:start({local, yourlogger}),
-    ok = gen_event:add_handler(?MODULE, fluent_event, debug),
-    ok = gen_event:notify(?MODULE, {debug, {[{<<"hoge">>,<<"data">>}]}}),
-
-#+END_EXAMPLE
+> {ok,_Pid}=gen_event:start({local, yourlogger}),
+> ok = gen_event:add_handler(?MODULE, fluent_event, debug),
+> ok = gen_event:notify(?MODULE, {debug, {[{<<"hoge">>,<<"data">>}]}}),
 
 Now I am thinking of better interface.
