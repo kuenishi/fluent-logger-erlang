@@ -1,4 +1,4 @@
-.PHONY: compile xref eunit clean doc check make deps
+.PHONY: compile xref eunit clean doc check make deps test
 
 PREFIX:=./
 DEST:=$(PREFIX)$(PROJECT)
@@ -22,8 +22,8 @@ edoc:
 	@$(REBAR) doc
 
 test:
-	@rm -rf .eunit
-	@mkdir -p .eunit
+#	@rm -rf .eunit
+#	@mkdir -p .eunit
 	@$(REBAR) skip_deps=true eunit
 
 compile:

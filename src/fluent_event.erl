@@ -21,13 +21,17 @@
 
 -record(state, {
 	  tag  :: atom(),
-	  tags :: string(),
+	  tagbd :: binary(), % binary of "tag."
 	  host :: inet:host(),
 	  port :: inet:port_number(),
 	  sock :: inet:socket()
 	 }).
 
 %% Adds an event handler
+%% -spec add_handler(atom()) -> ok.
+%% add_handler(Tag) ->
+%%     add_handler(Tag,localhost,24224)
+
 -spec add_handler(atom(), inet:host(), inet:port_number()) -> ok | {'EXIT', term()} | term().
 add_handler(Tag,Host,Port) ->
     gen_event:add_handler(?SERVER, ?MODULE, {Tag,Host,Port}).
@@ -43,7 +47,8 @@ add_handler(Tag,Host,Port) ->
 -spec init({atom(),inet:host(),inet:port_number()}) -> {ok, #state{}}.
 init({Tag,Host,Port}) when is_atom(Tag) ->
     {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
-    {ok,#state{tag=Tag,tags=atom_to_list(Tag),host=Host,port=Port,sock=S}};
+    TagBD = list_to_binary(atom_to_list(Tag) ++ "."),
+    {ok,#state{tag=Tag,tagbd=TagBD,host=Host,port=Port,sock=S}};
 init(Tag) when is_atom(Tag) ->
     init({Tag,localhost,24224}).
 
@@ -59,12 +64,17 @@ init(Tag) when is_atom(Tag) ->
 %%                          {ok, State} |
 %%                          {swap_handler, Args1, State1, Mod2, Args2} |
 %%                          remove_handler
+-spec handle_event({ atom() | string() | binary(), tuple() % => msgpack_term().
+		   }, #state{}) -> {ok, #state{}} | remove_handler.
 handle_event({Label,Data}, State) when is_atom(Label) ->
     handle_event({atom_to_list(Label),Data}, State);
 
 handle_event({Label,Data}, State) when is_list(Label) ->
+    handle_event({list_to_binary(Label),Data}, State);
+
+handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
     {Msec,Sec,_} = erlang:now(),
-    Package = [Label, Msec*1000000+Sec, Data],
+    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     ok=gen_tcp:send(State#state.sock, msgpack:pack(Package)),
     {ok, State}.
 
