@@ -75,8 +75,20 @@ handle_event({Label,Data}, State) when is_list(Label) ->
 handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
     {Msec,Sec,_} = erlang:now(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    ok=gen_tcp:send(State#state.sock, msgpack:pack(Package)),
-    {ok, State}.
+    try_send(State, msgpack:pack(Package), 3).
+
+try_send(_State, _, 0) -> throw({error, retry_over});
+try_send(State, Bin, N) ->
+    case gen_tcp:send(State#state.sock, Bin) of
+	ok -> {ok, State};
+	{error, closed} ->
+	    Host = State#state.host,
+	    Port = State#state.port,
+	    {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
+	    try_send(State#state{sock=S}, Bin, N-1);
+	Other ->
+	    throw(Other)
+    end.
 
 %%--------------------------------------------------------------------
 %% @private

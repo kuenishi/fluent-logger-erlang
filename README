@@ -16,3 +16,10 @@ TODO
 
 - better interface (accepting proplist-like map only, binary() or string()? )
 - tests
+- unknown failure in Lion: 
+=ERROR REPORT==== 9-Oct-2011::00:07:27 ===
+** Generic server inet_gethost_native_sup terminating 
+** Last message in was {'EXIT',<0.94.0>,killed}
+** When Server state == {state,inet_gethost_native,undefined,<0.94.0>,
+                               {local,inet_gethost_native_sup}}
+
