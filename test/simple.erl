@@ -10,6 +10,9 @@ aaa_test() ->
     ?debugHere,
     ?debugVal(Pid),
     ok = gen_event:notify(?MODULE, {debug, {[{<<"hoge">>,<<"data">>}]}}),
+%    error_logger:error_msg("hogehoge"),
+
+    ok = gen_event:stop(?MODULE),
     ok.
 
 -endif.
