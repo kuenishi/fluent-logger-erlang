@@ -75,7 +75,12 @@ handle_event({Label,Data}, State) when is_list(Label) ->
 handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
     {Msec,Sec,_} = erlang:now(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    try_send(State, msgpack:pack(Package), 3).
+    try_send(State, msgpack:pack(Package), 3);
+
+handle_event(Other, State) ->
+    Label = <<"other">>,
+    Data = list_to_binary(io_lib:format("~p", [Other])),
+    handle_event({Label, Data}, State).
 
 try_send(_State, _, 0) -> throw({error, retry_over});
 try_send(State, Bin, N) ->
