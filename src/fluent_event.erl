@@ -27,6 +27,16 @@
 	  sock :: inet:socket()
 	 }).
 
+% for lager 2.0 format
+-record(lager_msg,{
+        destinations :: list(),
+        metadata :: [tuple()],
+        severity :: atom(),
+        datetime :: {string(), string()},
+        timestamp :: erlang:timestamp(),
+        message :: list()
+    }).
+
 %% Adds an event handler
 %% -spec add_handler(atom()) -> ok.
 %% add_handler(Tag) ->
@@ -66,6 +76,15 @@ init(Tag) when is_atom(Tag) ->
 %%                          remove_handler
 -spec handle_event({ atom() | string() | binary(), tuple() % => msgpack_term().
 		   }, #state{}) -> {ok, #state{}} | remove_handler.
+handle_event({<<"log">>, #lager_msg{datetime={Date, Time}, message=Message}}, State) ->
+    Label = <<"lager_log">>,
+    Data = {[{<<"lager_date">>, list_to_binary(Date)},
+             {<<"later_time">>, list_to_binary(Time)},
+             {<<"txt">>, list_to_binary(Message)}]},
+    {Msec,Sec,_} = erlang:now(),
+    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
+    try_send(State, msgpack:pack(Package), 3);
+
 handle_event({Label,Data}, State) when is_atom(Label) ->
     handle_event({atom_to_list(Label),Data}, State);
 
