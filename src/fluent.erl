@@ -20,4 +20,4 @@ stop() ->
 
 -spec add_sender(atom(), inet:host(), inet:port_number()) -> ok.
 add_sender(Tag,Host,Port)->
-    okkkk.
+    ok.
