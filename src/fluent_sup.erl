@@ -24,5 +24,10 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, [?CHILD(fluent_default_logger, worker)]} }.
+    Children = [
+        {fluent, {gen_event, start_link, [{local, fluent_event}]},
+            permanent, 5000, worker, [dynamic]}
+    ],
+
+    {ok, { {one_for_one, 5, 10}, Children} }.
 
