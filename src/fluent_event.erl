@@ -57,7 +57,7 @@ add_handler(Tag,Host,Port) ->
 -spec init({atom(),inet:host(),inet:port_number()}) -> {ok, #state{}}.
 init({Tag,Host,Port}) when is_atom(Tag) ->
     {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
-    TagBD = list_to_binary(atom_to_list(Tag) ++ "."),
+    TagBD = <<(atom_to_binary(Tag, latin1))/binary, ".">>,
     {ok,#state{tag=Tag,tagbd=TagBD,host=Host,port=Port,sock=S}};
 init(Tag) when is_atom(Tag) ->
     init({Tag,localhost,24224}).
@@ -86,13 +86,13 @@ handle_event({<<"log">>, #lager_msg{datetime={Date, Time}, message=Message}}, St
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
 
 handle_event({Label,Data}, State) when is_atom(Label) ->
-    handle_event({atom_to_list(Label),Data}, State);
+    handle_event({atom_to_binary(Label, latin1),Data}, State);
 
 handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
 
 handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
 
@@ -101,7 +101,7 @@ handle_event({log, _N, {Date, Time}, Data0}, State) ->
     Data = {[{<<"lager_date">>, list_to_binary(Date)},
              {<<"later_time">>, list_to_binary(Time)},
              {<<"txt">>, list_to_binary(Data0)}]},
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
 
@@ -109,23 +109,10 @@ handle_event(Other, State) ->
     Label = <<"other">>,
     io:format("~p~n", [Other]),
     Data = {[{<<"log">>, list_to_binary(io_lib:format("~p", [Other]))}]},
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3).
 
-
-try_send(_State, _, 0) -> throw({error, retry_over});
-try_send(State, Bin, N) ->
-    case gen_tcp:send(State#state.sock, Bin) of
-	ok -> {ok, State};
-	{error, closed} ->
-	    Host = State#state.host,
-	    Port = State#state.port,
-	    {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
-	    try_send(State#state{sock=S}, Bin, N-1);
-	Other ->
-	    throw(Other)
-    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -183,3 +170,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+try_send(_State, _, 0) -> throw({error, retry_over});
+try_send(State, Bin, N) ->
+    case gen_tcp:send(State#state.sock, Bin) of
+	ok -> {ok, State};
+	{error, closed} ->
+	    Host = State#state.host,
+	    Port = State#state.port,
+	    {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
+	    try_send(State#state{sock=S}, Bin, N-1);
+	Other ->
+	    throw(Other)
+    end.
