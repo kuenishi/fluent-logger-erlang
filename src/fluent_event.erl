@@ -47,7 +47,7 @@ add_handler(Tag,Host,Port) ->
 -spec init({atom(),inet:host(),inet:port_number()}) -> {ok, #state{}}.
 init({Tag,Host,Port}) when is_atom(Tag) ->
     {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
-    TagBD = list_to_binary(atom_to_list(Tag) ++ "."),
+    TagBD = <<(atom_to_binary(Tag, latin1))/binary, ".">>,
     {ok,#state{tag=Tag,tagbd=TagBD,host=Host,port=Port,sock=S}};
 init(Tag) when is_atom(Tag) ->
     init({Tag,localhost,24224}).
@@ -67,7 +67,7 @@ init(Tag) when is_atom(Tag) ->
 -spec handle_event({ atom() | string() | binary(), tuple() % => msgpack_term().
 		   }, #state{}) -> {ok, #state{}} | remove_handler.
 handle_event({Label,Data}, State) when is_atom(Label) ->
-    handle_event({atom_to_list(Label),Data}, State);
+    handle_event({atom_to_binary(Label, latin1),Data}, State);
 
 handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
