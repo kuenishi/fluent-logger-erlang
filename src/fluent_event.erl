@@ -73,7 +73,7 @@ handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
 
 handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package), 3);
 
@@ -82,7 +82,7 @@ handle_event({log, _N, {Date, Time}, Data0}, State) ->
     Data = {[{<<"lager_date">>, list_to_binary(Date)},
              {<<"later_time">>, list_to_binary(Time)},
              {<<"txt">>, list_to_binary(Data0)}]},
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package), 3);
 
@@ -90,7 +90,7 @@ handle_event(Other, State) ->
     Label = <<"other">>,
     io:format("~p~n", [Other]),
     Data = {[{<<"log">>, list_to_binary(io_lib:format("~p", [Other]))}]},
-    {Msec,Sec,_} = erlang:now(),
+    {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package), 3).
 
