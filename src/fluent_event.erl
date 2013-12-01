@@ -76,13 +76,12 @@ init(Tag) when is_atom(Tag) ->
 %%                          remove_handler
 -spec handle_event({ atom() | string() | binary(), tuple() % => msgpack_term().
 		   }, #state{}) -> {ok, #state{}} | remove_handler.
+handle_event({log, _N, {Date, Time}, Data}, State) ->
+    Package = make_lager_package(Date, Time, Data, State),
+    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
+
 handle_event({<<"log">>, #lager_msg{datetime={Date, Time}, message=Message}}, State) ->
-    Label = <<"lager_log">>,
-    Data = {[{<<"lager_date">>, list_to_binary(Date)},
-             {<<"later_time">>, list_to_binary(Time)},
-             {<<"txt">>, list_to_binary(Message)}]},
-    {Msec,Sec,_} = os:timestamp(),
-    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
+    Package = make_lager_package(Date, Time, Message, State),
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
 
 handle_event({Label,Data}, State) when is_atom(Label) ->
@@ -92,15 +91,6 @@ handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
 
 handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
-    {Msec,Sec,_} = os:timestamp(),
-    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
-
-handle_event({log, _N, {Date, Time}, Data0}, State) ->
-    Label = <<"lager_log">>,
-    Data = {[{<<"lager_date">>, list_to_binary(Date)},
-             {<<"later_time">>, list_to_binary(Time)},
-             {<<"txt">>, list_to_binary(Data0)}]},
     {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
@@ -182,3 +172,11 @@ try_send(State, Bin, N) ->
 	Other ->
 	    throw(Other)
     end.
+
+make_lager_package(Date, Time, Data0, #state{tagbd=TagBD}) ->
+    Label = <<"lager_log">>,
+    Data = {[{<<"lager_date">>, list_to_binary(Date)},
+             {<<"later_time">>, list_to_binary(Time)},
+             {<<"txt">>, list_to_binary(Data0)}]},
+    {Msec,Sec,_} = os:timestamp(),
+    [<<TagBD/binary, Label/binary>>, Msec*1000000+Sec, Data].
