@@ -7,9 +7,9 @@ erlang logger using gen_event to output to fluent.
 ## Examples
 
 ```erl
-1> {ok,_Pid}=gen_event:start({local, yourlogger}),
-2> ok = gen_event:add_handler(?MODULE, fluent_event, debug),
-3> ok = gen_event:notify(?MODULE, {debug, {[{<<"hoge">>,<<"data">>}]}}),
+1> {ok,_Pid} = gen_event:start({local, yourlogger}),
+2> ok = gen_event:add_handler(yourlogger, fluent_event, debug),
+3> ok = gen_event:notify(yourlogger, {debug, {[{<<"hoge">>,<<"data">>}]}}),
 ```
 
 Now I am thinking of better interface.
