@@ -90,10 +90,15 @@ handle_event({Label,Data}, State) when is_atom(Label) ->
 handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
 
-handle_event({Label,Data}, State) when is_binary(Label) , is_tuple(Data) -> % Data should be map
+handle_event({Label,Data}, State) when is_binary(Label), is_tuple(Data) -> % Data should be map
     {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
+
+handle_event({Label,Data}, State) when is_binary(Label), is_list(Data) -> % jsx format
+    {Msec,Sec,_} = os:timestamp(),
+    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
+    try_send(State, msgpack:pack(Package, [{enable_str,false}, jsx]), 3);
 
 handle_event(Other, State) ->
     Label = <<"other">>,

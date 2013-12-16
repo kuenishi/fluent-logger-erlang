@@ -9,7 +9,7 @@ fluent_test_() ->
    fun stop/1,
    [{"normal format",
      fun() ->
-         ?assertEqual(ok, post({debug, {[{<<"hoge">>,<<"data">>}]}}))
+        ?assertEqual(ok, post({debug, {[{<<"hoge">>,<<"data">>}]}}))
      end},
     {"lager format",
      fun() ->
@@ -20,6 +20,15 @@ fluent_test_() ->
                                           {["2013",45,"08",45,"16"],["13",58,"41",58,"38",46,"275"]},
                                           {1376,628098,275271},
                                           ["\"a\""]}}))
+    end},
+    {"proplist format",
+     fun() ->
+        meck:expect(gen_tcp, send, fun(_, Bin) ->
+            ?assertMatch({ok, [_, _, {[{<<"hoge">>, <<"data">>}]}]}, msgpack:unpack(Bin)),
+            ok
+        end),
+
+        ?assertEqual(ok, post({debug, [{<<"hoge">>, <<"data">>}]}))
     end}
    ]}.
 
@@ -33,8 +42,8 @@ start() ->
     meck:new(gen_tcp, [passthrough, unstick]),
     meck:expect(gen_tcp, connect, [{['_', '_', '_'], {ok, socket}}]),
     meck:expect(gen_tcp, send, fun(_, Bin) ->
-      ?assertMatch({ok, _}, msgpack:unpack(Bin)),
-      ok
+        ?assertMatch({ok, _}, msgpack:unpack(Bin)),
+        ok
     end),
     meck:expect(gen_tcp, close, [{['_'], ok}]),
     {ok,_Pid}=gen_event:start({local, ?MODULE}),
