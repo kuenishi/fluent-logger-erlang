@@ -17,7 +17,3 @@ start() ->
 -spec stop() -> ok.
 stop() ->
     application:stop(fluent).
-
--spec add_sender(atom(), inet:host(), inet:port_number()) -> ok.
-add_sender(Tag,Host,Port)->
-    ok.
