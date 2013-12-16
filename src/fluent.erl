@@ -7,7 +7,6 @@
 %%% Created :  8 Oct 2011 by UENISHI Kota <uenishi.kota@lab.ntt.co.jp>
 %%%-------------------------------------------------------------------
 -module(fluent).
--author('@kuenishi').
 -export([start/0, stop/0]).
 
 -spec start() -> ok | {error, term()}.
