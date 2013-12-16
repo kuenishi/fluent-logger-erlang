@@ -14,30 +14,30 @@
 -export([add_handler/3]).
 
 %% gen_event callbacks
--export([init/1, handle_event/2, handle_call/2, 
-	 handle_info/2, terminate/2, code_change/3]).
+-export([init/1, handle_event/2, handle_call/2,
+         handle_info/2, terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
 -record(state, {
-	  tag  :: atom(),
-	  tagbd :: binary(), % binary of "tag."
-	  host :: inet:host(),
-	  port :: inet:port_number(),
-	  sock :: inet:socket()
-	 }).
+          tag  :: atom(),
+          tagbd :: binary(), % binary of "tag."
+          host :: inet:host(),
+          port :: inet:port_number(),
+          sock :: inet:socket()
+         }).
 
 % for lager 2.0 format
 -record(lager_msg,{
-        destinations :: list(),
-        metadata :: [tuple()],
-        severity :: atom(),
-        datetime :: {string(), string()},
-        timestamp :: erlang:timestamp(),
-        message :: list()
-    }).
+          destinations :: list(),
+          metadata :: [tuple()],
+          severity :: atom(),
+          datetime :: {string(), string()},
+          timestamp :: erlang:timestamp(),
+          message :: list()
+         }).
 
-%% Adds an event handler
+%% @doc Adds an event handler
 %% -spec add_handler(atom()) -> ok.
 %% add_handler(Tag) ->
 %%     add_handler(Tag,localhost,24224)
@@ -74,8 +74,8 @@ init(Tag) when is_atom(Tag) ->
 %%                          {ok, State} |
 %%                          {swap_handler, Args1, State1, Mod2, Args2} |
 %%                          remove_handler
--spec handle_event({ atom() | string() | binary(), tuple() % => msgpack_term().
-		   }, #state{}) -> {ok, #state{}} | remove_handler.
+-spec handle_event({ atom() | string() | binary(), tuple()}, #state{}) ->
+                          {ok, #state{}} | remove_handler.
 handle_event({log, _N, {Date, Time}, Data}, State) ->
     Package = make_lager_package(Date, Time, Data, State),
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
@@ -168,14 +168,14 @@ code_change(_OldVsn, State, _Extra) ->
 try_send(_State, _, 0) -> throw({error, retry_over});
 try_send(State, Bin, N) ->
     case gen_tcp:send(State#state.sock, Bin) of
-	ok -> {ok, State};
-	{error, closed} ->
-	    Host = State#state.host,
-	    Port = State#state.port,
-	    {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
-	    try_send(State#state{sock=S}, Bin, N-1);
-	Other ->
-	    throw(Other)
+        ok -> {ok, State};
+        {error, closed} ->
+            Host = State#state.host,
+            Port = State#state.port,
+            {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
+            try_send(State#state{sock=S}, Bin, N-1);
+        Other ->
+            throw(Other)
     end.
 
 make_lager_package(Date, Time, Data0, #state{tagbd=TagBD}) ->

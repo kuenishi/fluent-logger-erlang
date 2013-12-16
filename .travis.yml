@@ -2,10 +2,5 @@ language: erlang
 script: (make && make test)
 before_script:
 otp_release:
-  - R16B02
-  - R16B01
-  - R16B
+  - R16B03
   - R15B03
-  - R15B02
-  - R15B01
-  - R15B
