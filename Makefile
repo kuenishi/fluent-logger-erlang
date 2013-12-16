@@ -42,4 +42,4 @@ app:
 	@$(REBAR) create template=mochiwebapp dest=$(DEST) appid=$(PROJECT)
 
 xref:
-	@$(REBAR) xref
+	@$(REBAR) xref skip_deps=true
