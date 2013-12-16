@@ -95,7 +95,7 @@ handle_event({Label,Data}, State) when is_binary(Label), is_tuple(Data) -> % Dat
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
 
-handle_event({Label,Data}, State) when is_binary(Label), is_list(Data) -> % jsx format
+handle_event({Label,Data}, State) when is_binary(Label), is_list(Data) -> % proplist format
     {Msec,Sec,_} = os:timestamp(),
     Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
     try_send(State, msgpack:pack(Package, [{enable_str,false}, jsx]), 3);
@@ -181,7 +181,7 @@ try_send(State, Bin, N) ->
 make_lager_package(Date, Time, Data0, #state{tagbd=TagBD}) ->
     Label = <<"lager_log">>,
     Data = {[{<<"lager_date">>, list_to_binary(Date)},
-             {<<"later_time">>, list_to_binary(Time)},
+             {<<"lager_time">>, list_to_binary(Time)},
              {<<"txt">>, list_to_binary(Data0)}]},
     {Msec,Sec,_} = os:timestamp(),
     [<<TagBD/binary, Label/binary>>, Msec*1000000+Sec, Data].

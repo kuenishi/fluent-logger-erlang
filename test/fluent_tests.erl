@@ -4,25 +4,42 @@
 -include_lib("eunit/include/eunit.hrl").
 
 fluent_test_() ->
-  {foreach,
-   fun start/0,
-   fun stop/1,
-   [{"normal format", fun normal_format/0},
-    {"lager format", fun lager_format/0},
-    {"proplist format", fun proplist_format/0}
-   ]}.
+    {foreach,
+     fun start/0,
+     fun stop/1,
+     [{"normal format", fun normal_format/0},
+      {"lager format", fun lager_format/0},
+      {"lager2 format", fun lager2_format/0},
+      {"proplist format", fun proplist_format/0}
+     ]}.
 
 normal_format() ->
     meck:expect(gen_tcp, send, fun(_, Bin) ->
-        ?assertMatch({ok, _}, msgpack:unpack(Bin, [{enable_str, false}])),
+        ?assertMatch({ok, [_, _, {[{<<"hoge">>, <<"data">>}]}]}, msgpack:unpack(Bin, [{enable_str, false}])),
         ok
     end),
     post({debug, {[{<<"hoge">>,<<"data">>}]}}),
+    post({"debug", {[{<<"hoge">>,<<"data">>}]}}),
+    post({<<"debug">>, {[{<<"hoge">>,<<"data">>}]}}),
     ?assert(meck:validate(gen_tcp)).
 
 lager_format() ->
     meck:expect(gen_tcp, send, fun(_, Bin) ->
-        ?assertMatch({ok, _}, msgpack:unpack(Bin, [{enable_str, false}])),
+        ?assertMatch({ok, [_, _, {[{<<"lager_date">>, <<"2013-08-16">>},
+                                   {<<"lager_time">>, <<"13:41:38.275">>},
+                                   {<<"txt">>, <<"\"a\"">>}]}]},
+                          msgpack:unpack(Bin, [{enable_str, false}])),
+        ok
+    end),
+    post({log, "hoge", {["2013",45,"08",45,"16"],["13",58,"41",58,"38",46,"275"]}, ["\"a\""]}),
+    ?assert(meck:validate(gen_tcp)).
+
+lager2_format() ->
+    meck:expect(gen_tcp, send, fun(_, Bin) ->
+        ?assertMatch({ok, [_, _, {[{<<"lager_date">>, <<"2013-08-16">>},
+                                   {<<"lager_time">>, <<"13:41:38.275">>},
+                                   {<<"txt">>, <<"\"a\"">>}]}]},
+                          msgpack:unpack(Bin, [{enable_str, false}])),
         ok
     end),
     post({<<"log">>, {lager_msg,
@@ -42,12 +59,13 @@ proplist_format() ->
     post({debug, [{<<"hoge">>, <<"data">>}]}),
     ?assert(meck:validate(gen_tcp)).
 
+
 %% test helpers
 
 post(Data) ->
-  Result = gen_event:notify(?MODULE, Data),
-  meck:wait(gen_tcp, send, '_', 1000),
-  Result.
+    Result = gen_event:notify(?MODULE, Data),
+    meck:wait(gen_tcp, send, '_', 1000),
+    Result.
 
 start() ->
     meck:new(gen_tcp, [passthrough, unstick]),
