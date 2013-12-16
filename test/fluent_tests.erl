@@ -53,7 +53,7 @@ lager2_format() ->
 
 proplist_format() ->
     meck:expect(gen_tcp, send, fun(_, Bin) ->
-        ?assertMatch({ok, [_, _, {[{<<"hoge">>, <<"data">>}]}]}, msgpack:unpack(Bin, [{enable_str, false}])),
+        ?assertMatch({ok, [_, _, [{<<"hoge">>, <<"data">>}]]}, msgpack:unpack(Bin, [{enable_str, false}, jsx])),
         ok
     end),
     post({debug, [{<<"hoge">>, <<"data">>}]}),
