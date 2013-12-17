@@ -8,6 +8,19 @@ erlang logger using gen_event to output to fluent.
 
 ```erl
 1> {ok,_Pid} = gen_event:start({local, yourlogger}),
-2> ok = gen_event:add_handler(yourlogger, fluent_event, debug),
-3> ok = gen_event:notify(yourlogger, {debug, {[{<<"hoge">>,<<"data">>}]}}),
+2> ok = gen_event:add_handler(yourlogger, fluent_event, myapp),
+```
+
+### eep18
+
+```erl
+3> ok = gen_event:notify(yourlogger, {access, {[{<<"agent">>,<<"foo">>}]}}),
+% 2013-12-17 22:55:43 +0900 myapp.access: {"agent":"foo"}
+```
+
+### proplist
+
+```erl
+4> ok = gen_event:notify(yourlogger, {access, [{<<"agent">>,<<"foo">>}]}),
+% 2013-12-17 22:55:53 +0900 myapp.access: {"agent":"foo"}
 ```
