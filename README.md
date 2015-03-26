@@ -24,3 +24,14 @@ erlang logger using gen_event to output to fluent.
 4> ok = gen_event:notify(yourlogger, {access, [{<<"agent">>,<<"foo">>}]}),
 % 2013-12-17 22:55:53 +0900 myapp.access: {"agent":"foo"}
 ```
+
+### with Lager
+
+In `app.config` or `sys.config`:
+
+```erl
+{lager, [
+  {handlers, [
+     {fluent_event, {yourappname, hostname, 24224}}
+]}]},
+```
