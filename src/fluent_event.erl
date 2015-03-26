@@ -121,7 +121,8 @@ try_send(State, Bin, N) when is_binary(Bin) ->
     %% Here^^ uses matching with binary because successful msgpack:pack()
     %% always returns binary, not iolist().
     case gen_tcp:send(State#state.sock, Bin) of
-        ok -> {ok, State};
+        ok ->
+            {ok, State};
         {error, closed} ->
             Host = State#state.host,
             Port = State#state.port,
