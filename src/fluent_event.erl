@@ -37,11 +37,6 @@
           message :: list()
          }).
 
-%% @doc Adds an event handler
-%% -spec add_handler(atom()) -> ok.
-%% add_handler(Tag) ->
-%%     add_handler(Tag,localhost,24224)
-
 -spec add_handler(atom(), inet:host(), inet:port_number()) -> ok | {'EXIT', term()} | term().
 add_handler(Tag,Host,Port) ->
     gen_event:add_handler(?SERVER, ?MODULE, {Tag,Host,Port}).
@@ -77,12 +72,12 @@ init(Tag) when is_atom(Tag) ->
 -spec handle_event({ atom() | string() | binary(), tuple()}, #state{}) ->
                           {ok, #state{}} | remove_handler.
 handle_event({log, _N, {Date, Time}, Data}, State) ->
-    Package = make_lager_package(Date, Time, Data, State),
-    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
+    Bin = make_lager_package(Date, Time, Data, State),
+    try_send(State, Bin, 3);
 
 handle_event({<<"log">>, #lager_msg{datetime={Date, Time}, message=Message}}, State) ->
-    Package = make_lager_package(Date, Time, Message, State),
-    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
+    Bin = make_lager_package(Date, Time, Message, State),
+    try_send(State, Bin, 3);
 
 handle_event({Label,Data}, State) when is_atom(Label) ->
     handle_event({atom_to_binary(Label, latin1),Data}, State);
@@ -90,23 +85,31 @@ handle_event({Label,Data}, State) when is_atom(Label) ->
 handle_event({Label,Data}, State) when is_list(Label) ->
     handle_event({list_to_binary(Label),Data}, State);
 
-handle_event({Label,Data}, State) when is_binary(Label), is_tuple(Data) -> % Data should be map
-    {Msec,Sec,_} = os:timestamp(),
-    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3);
+handle_event({Label,Data}, State) when is_binary(Label), is_tuple(Data) ->
+    %% Data should be map
+    Binary = case make_default_package(State, Label, Data) of
+                 {error, _} ->  %% Data was not a map
+                     make_error_package(State, <<"pack_error">>, Data);
+                 Bin ->
+                     Bin
+             end,
+    try_send(State, Binary, 3);
 
-handle_event({Label,Data}, State) when is_binary(Label), is_list(Data) -> % proplist format
-    {Msec,Sec,_} = os:timestamp(),
-    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    try_send(State, msgpack:pack(Package, [{enable_str,false}, jsx]), 3);
+handle_event({Label,Data}, State) when is_binary(Label), is_list(Data) -> 
+    %% map in proplist style
+    Binary = case make_default_package_jsx(State, Label, Data) of
+                 {error, _} ->  %% Data was not a map
+                     make_error_package(State, <<"pack_error">>, Data);
+                 Bin ->
+                     Bin
+             end,
+    try_send(State, Binary, 3);
 
 handle_event(Other, State) ->
     Label = <<"other">>,
-    io:format("~p~n", [Other]),
-    Data = {[{<<"log">>, list_to_binary(io_lib:format("~p", [Other]))}]},
-    {Msec,Sec,_} = os:timestamp(),
-    Package = [<<(State#state.tagbd)/binary, Label/binary>>, Msec*1000000+Sec, Data],
-    try_send(State, msgpack:pack(Package, [{enable_str,false}]), 3).
+    Data = {[{<<"log">>, list_to_binary(io_lib:format("~w", [Other]))}]},
+    Bin = make_default_package(State, Label, Data),
+    try_send(State, Bin, 3).
 
 
 %%--------------------------------------------------------------------
@@ -166,7 +169,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 try_send(_State, _, 0) -> throw({error, retry_over});
-try_send(State, Bin, N) ->
+try_send(State, Bin, N) when is_binary(Bin) ->
+    %% Here^^ uses matching with binary because successful msgpack:pack()
+    %% always returns binary, not iolist().
     case gen_tcp:send(State#state.sock, Bin) of
         ok -> {ok, State};
         {error, closed} ->
@@ -175,8 +180,27 @@ try_send(State, Bin, N) ->
             {ok,S} = gen_tcp:connect(Host,Port,[binary,{packet,0}]),
             try_send(State#state{sock=S}, Bin, N-1);
         Other ->
-            throw(Other)
-    end.
+            throw({Other, Bin})
+    end;
+try_send(_State, {error, Reason}, _N) ->
+    error(Reason).
+
+make_error_package(State, Label, Term) ->
+    Data = list_to_binary(io_lib:format("~w", [Term])),
+    make_default_package(State, Label, Data).
+
+make_default_package(State, Label, Data, PackOpt) ->
+    {Msec,Sec,_} = os:timestamp(),
+    Package = [<<(State#state.tagbd)/binary, Label/binary>>,
+               Msec*1000000+Sec,
+               Data],
+    msgpack:pack(Package, PackOpt).
+
+make_default_package(State, Label, Data) ->
+    make_default_package(State, Label, Data, [{enable_str,false}]).
+
+make_default_package_jsx(State, Label, Data) ->
+    make_default_package(State, Label, Data, [{enable_str,false}, jsx]).
 
 make_lager_package(Date, Time, Data0, #state{tagbd=TagBD}) ->
     Label = <<"lager_log">>,
@@ -184,4 +208,5 @@ make_lager_package(Date, Time, Data0, #state{tagbd=TagBD}) ->
              {<<"lager_time">>, list_to_binary(Time)},
              {<<"txt">>, list_to_binary(Data0)}]},
     {Msec,Sec,_} = os:timestamp(),
-    [<<TagBD/binary, Label/binary>>, Msec*1000000+Sec, Data].
+    Package = [<<TagBD/binary, Label/binary>>, Msec*1000000+Sec, Data],
+    msgpack:pack(Package, [{enable_str, false}]).
